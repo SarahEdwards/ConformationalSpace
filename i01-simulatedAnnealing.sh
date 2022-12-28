@@ -31,6 +31,7 @@
 # Requires prmtop and inpcrd files as created by tLEaP. These should exist in the directory specified by ${path}.
 # Requires a molecule name. For simplicity, best practice would be to use the same name as the PDB molecule code.
 # Requires a checkpoint file. This could be anything. I have used chk.log in the outputStream directory.
+# Sends email to target mail recipient when job completes
 
 path="${PBS_O_HOME}/prepBasics/phoenixData/exactCopy/"
 firstJob="i02-01_Min.in"
@@ -42,6 +43,8 @@ prmTop="1F6M_l_u.prmtop"
 inpCrd="1F6M_l_u.inpcrd"
 moleuleName="1F6M"
 chkPath="${path}outputStream/chk.log"
+mailRecip='zstichter@gmail.com'
+
 
 
 #------------------------------------------------------------#
@@ -232,7 +235,11 @@ outPath=${outDir}${outStep}
 #------------------------------------------------------------#
 
 # Save output to unique directory
-find ./ -type d -iname "outputStream" -exec cp -r -b -S "(1)" {} ${path}${moleculeName};
+
+find ./ -type d -iname "outputStream" -exec bash -c 'cp -r -b -S "(1)" {} ${path}${moleculeName}';
+
+# Send email to user to notify of completion
+mail -s "${moleculeName} Job Completd at $(date)" ${mailRecip} < /dev/null
 
 
 #------------------------------------------------------------#
