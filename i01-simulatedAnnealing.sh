@@ -27,7 +27,6 @@
 
 # Should be updated to accept args later (possibly from command line; alternatively, can pass through qsub)
 # Should be updated to add a job name option
-# Should copy completed files to new directory for safekeeping (wip. bugged out atm)
 
 
 #------------------------------------------------------------#
@@ -53,7 +52,6 @@ prmTop="1F6M_l_u.prmtop"
 inpCrd="1F6M_l_u.inpcrd"
 moleculeName="1F6M"
 chkFile="chk.log"
-
 
 
 #------------------------------------------------------------#
