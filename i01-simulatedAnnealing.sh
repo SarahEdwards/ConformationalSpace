@@ -40,7 +40,7 @@
 # Requires 5 jobs. These should exist in the directory specified by ${path}.
 # Requires prmtop and inpcrd files as created by tLEaP. These should exist in the directory specified by ${path}.
 # Requires a molecule name. For simplicity, best practice would be to use the same name as the PDB molecule code.
-# Requires a checkpoint file. This could be anything. I have used a file named chk.log in the outputStream directory.
+# Requires a checkpoint file. This could be anything. I have used a file named chk.log. This is always located in the outputStream_yyyy-mm-dd_hh-mm-ss/moleculeName-jobID directory.
 # Sends email to target mail recipient when job completes (recipient must be set in line 4; multiple recipients can be entered by separating addresses with commas.)
 
 path="${PBS_O_HOME}/prepBasics/phoenixData/exactCopy/"
@@ -100,8 +100,10 @@ mkdir "${outPath}"
 #                                                            #
 #------------------------------------------------------------#
 
+# Get the job name from the provided .in file
 jobName=${firstJob##*-}
 jobName=${jobName%%.*}
+# Create strings for the various output files. S/b oX-jobName format
 outOut="o${outInc}-${jobName}.out"
 ((outInc++))
 rstOut="o${outInc}-${jobName}.rst"
@@ -111,15 +113,15 @@ mdInfoOut="o${outInc}-${jobName}.mdinfo"
 mdCrdOut="o${outInc}-${jobName}.mdcrd"
 ((outInc++))
 
+# Log & call Sander
 echo $"$(date): Submitting job 1" >> ${chkPath}
 mpirun sander -O -i ${firstJob} -o ${outPath}/${outOut} -p ${prmTop} -c $inpCrd -r ${outPath}/${rstOut} -inf ${outPath}/${mdInfoOut} -x ${outPath}/${mdCrdOut}
 
-# qsub -N "01_Min" -z "AmberSubmit_1.sh"  
+# Log checkpoint & update variables
 echo $"$(date): Job 1 completed." >> ${chkPath}
 outInc=1
 lastPath=${outPath}
 lastRst=${rstOut}
-# echo ${outPath} >> ${chkPath}
 ((outStep++))
 outPath=${outDir}${outStep}
 
@@ -130,6 +132,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${secondJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -159,6 +162,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${thirdJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -189,6 +193,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${fourthJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -218,6 +223,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${fifthJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -238,17 +244,6 @@ lastPath=${outPath}
 lastRst=${rstOut}
 ((outStep++))
 outPath=${outDir}${outStep}
-
-
-#------------------------------------------------------------#
-#                                                            #
-# Finishing Up                                               #
-#                                                            #
-#------------------------------------------------------------#
-
-# Save output to unique directory
-
-# find ./ -type d -iname "outputStream/" -exec bash -c cp -r -b -S "(1)" {} ${path}${moleculeName} \;
 
 
 #------------------------------------------------------------#
