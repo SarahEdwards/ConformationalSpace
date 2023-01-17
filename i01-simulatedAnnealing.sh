@@ -26,7 +26,7 @@
 #------------------------------------------------------------#
 
 # Should be updated to accept args later (possibly from command line; alternatively, can pass through qsub)
-# Should be updated to add a job name option
+# Refactor to include input directory such that input files are in their own directory and script references input files within input directory
 
 
 #------------------------------------------------------------#
@@ -38,18 +38,17 @@
 # Simulated annealing is a five step process. Step 1 is the basic minimization. Step 2 is the heating protocol. Step 3 is the production MD. Step 4 is the cooling protocol. Step 5 is the production MD post coooling.
 # Requires 5 jobs. These should exist in the directory specified by ${path}.
 # Requires prmtop and inpcrd files as created by tLEaP. These should exist in the directory specified by ${path}.
-# Requires a molecule name. For simplicity, best practice would be to use the same name as the PDB molecule code.
-# Requires a checkpoint file. This could be anything. I have used a file named chk.log. This is always located in the outputStream_yyyy-mm-dd_hh-mm-ss/moleculeName-jobID directory.
+# Requires a molecule name. This should be the same as the first four characters of the pdb file.
+# Requires a checkpoint file. This could be anything. I have used a file named chk.log in the outputStream directory.
 # Sends email to target mail recipient when job completes (recipient must be set in line 4; multiple recipients can be entered by separating addresses with commas.)
 
 path="${PBS_O_HOME}/prepBasics/phoenixData/exactCopy/"
-firstJob="i02-01_Min.in"
-secondJob="i03-02_Heat.in"
-thirdJob="i04-03_Prod.in"
-fourthJob="i05-04_Cool.in"
-fifthJob="i06-05_Prod.in"
-prmTop="1F6M_l_u.prmtop"
-inpCrd="1F6M_l_u.inpcrd"
+inputDirectory="${path}inputStream/"
+firstInput="i02-01_Min.in"
+secondInput="i03-02_Heat.in"
+thirdInput="i04-03_Prod.in"
+fourthInput="i05-04_Cool.in"
+fifthInput="i06-05_Prod.in"
 moleculeName="1F6M"
 chkFile="chk.log"
 
@@ -60,6 +59,13 @@ chkFile="chk.log"
 #                                                            #
 #------------------------------------------------------------#
 
+prmTop="${inputDirectory}${moleculeName}_l_u.prmtop"
+inpCrd="${inputDirectory}${moleculeName}_l_u.inpcrd"
+firstJob="${inputDirectory}${firstInput}"
+secondJob="${inputDirectory}${secondInput}"
+thirdJob="${inputDirectory}${thirdInput}"
+fourthJob="${inputDirectory}${fourthInput}"
+fifthJob="${inputDirectory}${fifthInput}"
 jobName=""
 outOut=""
 rstOut=""
@@ -74,6 +80,17 @@ chkPath=${outDir}${chkFile}
 outPath=${outDir}${outInc}
 lastPath=${outPath}
 lastRst=""
+trajDir="${outDir}trajAnalysis"
+trajProd1=""
+trajProd2=""
+trajUnBound="${inputDirectory}${moleculeName}_l_u.pdb"
+trajBound="${inputDirectory}${moleculeName}_l_b.pdb"
+rmsd1="${trajDir}/rmsd1-1.in"
+rmsd2="${trajDir}/rmsd2-1.in"
+rmsd3="${trajDir}/rmsd3-1.in"
+rmsd4="${trajDir}/rmsd1-2.in"
+rmsd5="${trajDir}/rmsd2-2.in"
+rmsd6="${trajDir}/rmsd3-2.in"
 
 
 #------------------------------------------------------------#
@@ -177,6 +194,9 @@ mkdir ${outPath}
 echo $"$(date): Submitting job 3" >> ${chkPath}
 mpirun sander -O -i ${thirdJob} -o ${outPath}/${outOut} -p ${prmTop} -c ${lastPath}/${lastRst} -r ${outPath}/${rstOut} -x ${outPath}/${mdCrdOut} -inf ${outPath}/${mdInfoOut}
 
+# Save .mdcrd file to a variable for reference later
+trajProd1=${outPath}/${mdCrdOut}
+
 echo $"$(date): Job 3 completed." >> "$chkPath"
 outInc=1
 lastPath=${outPath}
@@ -236,12 +256,71 @@ mdCrdOut="o${outInc}-${jobName}.mdcrd"
 mkdir ${outPath}
 echo $"$(date): Submitting job 5" >> ${chkPath}
 mpirun sander -O -i $fifthJob -o ${outPath}/${outOut} -p ${prmTop} -c ${lastPath}/${lastRst} -r ${outPath}/${rstOut} -x ${outPath}/${mdCrdOut} -inf ${outPath}/${mdInfoOut}
+trajProd2=${outPath}/${mdCrdOut}
+
 echo $"$(date): Job 5 completed." >> "$chkPath"
 outInc=1
 lastPath=${outPath}
 lastRst=${rstOut}
 ((outStep++))
 outPath=${outDir}${outStep}
+
+
+#------------------------------------------------------------#
+#                                                            #
+# cpptraj RMSD Analysis                                      #
+#                                                            #
+#------------------------------------------------------------# 
+
+# Begin RMSD1 analysis
+echo "$(date): Beginning cpptraj analysis. Making directory" >> ${chkPath}
+mkdir ${trajDir}
+touch ${rmsd1}
+echo "parm ${prmTop}" >> ${rmsd1}
+echo "trajin ${trajProd1}" >> ${rmsd1}
+echo "rmsd ${moleculeName}_l_u_1_ffrmsd out ${trajDir}/rmsd1.agr first mass" >> ${rmsd1}
+cp ${rmsd1} ${rmsd4}
+sed -i "s|${trajProd1}|${trajProd2}|" ${rmsd4}
+sed -i "s|rmsd1.agr|rmsd4.agr|" ${rmsd4}
+
+echo "$(date): Running RMSD analysis 1-1" >> ${chkPath}
+cpptraj -i ${rmsd1} >> ${chkPath}
+echo "$(date): Running RMSD analysis 1-2" >> ${chkPath}
+cpptraj -i ${rmsd4} >> ${chkPath}
+
+# Begin RMSD2 analysis
+echo "$(date): Creating RMSD2 input file" >> ${chkPath}
+touch ${rmsd2}
+echo "parm ${prmTop} [l_u_prmtop]" >> ${rmsd2}
+echo "parm ${trajUnBound} [l_u_pdb]" >> ${rmsd2}
+echo "trajin ${trajProd1} parm [l_u_prmtop]" >> ${rmsd2}
+echo "reference ${trajUnBound} [l_u_rmsd2] parm [l_u_pdb]" >> ${rmsd2}
+echo "rmsd ${moleculeName}_l_u_1-ubrmsd :*@CA out ${trajDir}/rmsd2.agr mass ref [l_u_rmsd2]" >> ${rmsd2}
+cp ${rmsd2} ${rmsd5}
+sed -i "s|${trajProd1}|${trajProd2}|" ${rmsd5}
+sed -i "s|rmsd2.agr|rmsd5.agr|" ${rmsd5}
+
+echo "$(date): Running RMSD analysis 2-1" >> ${chkPath}
+cpptraj -i ${rmsd2} >> ${chkPath}
+echo "$(date): Running RMSD analysis 2-2" >> ${chkPath}
+cpptraj -i ${rmsd5} >> ${chkPath}
+
+# Begin RMSD3 analysis
+echo "$(date): Creating RMSD3 input file" >> ${chkPath}
+touch ${rmsd3}
+echo "parm ${prmTop} [l_u_prmtop]" >> ${rmsd3}
+echo "parm ${trajBound} [l_b_pdb]" >> ${rmsd3}
+echo "trajin ${trajProd1} parm [l_u_prmtop]" >> ${rmsd3}
+echo "reference ${trajBound} [l_b_rmsd3] parm [l_b_pdb]" >> ${rmsd3}
+echo "rmsd ${moleculeName}_l_u_3-brmsd :*@CA out ${trajDir}/rmsd3.agr mass ref [l_b_rmsd3]" >> ${rmsd3}
+cp ${rmsd3} ${rmsd6}
+sed -i "s|${trajProd1}|${trajProd2}|" ${rmsd6}
+sed -i "s|rmsd3.agr|rmsd6.agr|" ${rmsd6}
+
+echo "$(date): Running RMSD analysis 3-1" >> ${chkPath}
+cpptraj -i ${rmsd3} >> ${chkPath}
+echo "$(date): Running RMSD analysis 3-2" >> ${chkPath}
+cpptraj -i ${rmsd6} >> ${chkPath}
 
 
 #------------------------------------------------------------#
