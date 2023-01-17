@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #PBS -m e
-#PBS -M zstichter@gmail.com
+#PBS -M xxx@xxxxx.com
 #PBS -j eo
 #PBS -t 1-3
 
@@ -15,7 +15,7 @@
 # -m e mail users on end
 # -M xxx@xxxxx.edu email address to notify on job completion
 # -j eo join the output file to the error file
-# -t 1-3 run the trial in simultaneous triplicate
+# -t 1-3 run the trial in simultaneous triplicate. Use -t 1-3%1 to run consecutive triplicate.
 
 
 
@@ -115,8 +115,10 @@ mkdir "${outPath}"
 #                                                            #
 #------------------------------------------------------------#
 
+# Get the job name from the provided .in file
 jobName=${firstJob##*-}
 jobName=${jobName%%.*}
+# Create strings for the various output files S/b oX-jobName format
 outOut="o${outInc}-${jobName}.out"
 ((outInc++))
 rstOut="o${outInc}-${jobName}.rst"
@@ -126,15 +128,15 @@ mdInfoOut="o${outInc}-${jobName}.mdinfo"
 mdCrdOut="o${outInc}-${jobName}.mdcrd"
 ((outInc++))
 
+# Log & call Sander
 echo $"$(date): Submitting job 1" >> ${chkPath}
 mpirun sander -O -i ${firstJob} -o ${outPath}/${outOut} -p ${prmTop} -c $inpCrd -r ${outPath}/${rstOut} -inf ${outPath}/${mdInfoOut} -x ${outPath}/${mdCrdOut}
 
-# qsub -N "01_Min" -z "AmberSubmit_1.sh"  
+# Log checkpoint & update variables
 echo $"$(date): Job 1 completed." >> ${chkPath}
 outInc=1
 lastPath=${outPath}
 lastRst=${rstOut}
-# echo ${outPath} >> ${chkPath}
 ((outStep++))
 outPath=${outDir}${outStep}
 
@@ -145,6 +147,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${secondJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -174,6 +177,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${thirdJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
@@ -207,6 +211,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${fourthJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
