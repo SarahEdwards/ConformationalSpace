@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #PBS -m e
-#PBS -M xxx@xxxxx.com
+#PBS -M xxx@xxxxx.edu
 #PBS -j eo
 #PBS -t 1-3
 
@@ -118,7 +118,7 @@ mkdir "${outPath}"
 # Get the job name from the provided .in file
 jobName=${firstJob##*-}
 jobName=${jobName%%.*}
-# Create strings for the various output files S/b oX-jobName format
+# Create strings for the various output files. S/b oX-jobName format
 outOut="o${outInc}-${jobName}.out"
 ((outInc++))
 rstOut="o${outInc}-${jobName}.rst"
