@@ -241,6 +241,7 @@ outPath=${outDir}${outStep}
 #                                                            #
 #------------------------------------------------------------#
 
+# See first job documentation
 jobName=${fifthJob##*-}
 jobName=${jobName%%.*}
 outOut="o${outInc}-${jobName}.out"
